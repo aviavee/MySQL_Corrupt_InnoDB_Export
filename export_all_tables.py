@@ -7,14 +7,15 @@ import argparse
 import signal  
 import logging  
 
-def export_all_tables_in_batches(db_name, output_dir, username, password, batch_size=10000, single_query_mode=False, use_last_id=False, skip_tables=None):  
+def export_all_tables_in_batches(db_name, output_dir, username, password, batch_size=10000, single_query_mode=False, use_last_id=False, skip_tables=None, only_table=None):
     """  
     Export all tables in a MySQL database to CSV files in batches or one query per ID.  
     If the program is restarted, it resumes from where it left off.  
 
     Args:  
         ...existing args...  
-        skip_tables (list): List of table names to skip during export  
+        skip_tables (list): List of table names to skip during export
+        only_table (str): Single table name to export, skipping all others 
     """ 
     def connect_to_db():  
         """Establish a connection to the MySQL database."""  
@@ -147,6 +148,20 @@ def export_all_tables_in_batches(db_name, output_dir, username, password, batch_
         logging.info("Gracefully exiting...")  
         sys.exit(0)  
 
+    def get_table_row_count(cursor, table_name):  
+        """  
+        Get the number of rows in a table.  
+        """  
+        try:  
+            query = f"SELECT COUNT(*) FROM {table_name}"  
+            cursor.execute(query)  
+            count = cursor.fetchone()[0]  
+            logging.debug(f"Table {table_name} has {count} rows")  
+            return count  
+        except Error as e:  
+            logging.error(f"Error getting row count for table {table_name}: {e}")  
+            sys.exit(1) 
+
     # Register the signal handler for Ctrl-C  
     signal.signal(signal.SIGINT, graceful_exit)  
 
@@ -158,14 +173,29 @@ def export_all_tables_in_batches(db_name, output_dir, username, password, batch_
         # Step 2: Get all table names  
         tables = get_all_tables(cursor)  
 
+        # If only_table is specified, verify it exists  
+        if only_table and only_table not in tables:  
+            logging.error(f"Specified table '{only_table}' does not exist in the database")  
+            sys.exit(1)  
+
+        # Filter tables based on only_table if specified  
+        tables_to_process = [only_table] if only_table else tables  
+
         # Step 3: Export each table  
-        for table_name in tables:  
+        for table_name in tables_to_process:  
             # Skip tables if they're in the skip_tables list  
             if skip_tables and table_name in skip_tables:  
                 logging.info(f"Skipping table: {table_name} (specified in skip_tables)")  
-                continue 
+                continue  
 
-            logging.info(f"Starting export for table: {table_name}")  
+            # Check for empty tables only in batch mode without last_id  
+            if not single_query_mode and not use_last_id:  
+                row_count = get_table_row_count(cursor, table_name)  
+                if row_count == 0:  
+                    logging.info(f"Skipping table: {table_name} (table is empty)")  
+                    continue  
+
+            logging.info(f"Starting export for table: {table_name}")
 
             # Determine the output file for the table  
             output_file = os.path.join(output_dir, f"{table_name}.csv")  
@@ -246,8 +276,11 @@ if __name__ == "__main__":
     parser.add_argument("--single_query_mode", action="store_true", help="Enable single query mode to export one row at a time.")  
     parser.add_argument("--log_level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level (default: INFO).")  
     parser.add_argument("--last_id", action="store_true", help="Manually specify the last ID that exists in the database for each table.")  
-    # Add new argument for skip_tables  
-    parser.add_argument("--skip_tables", nargs="+", help="List of table names to skip during export")  
+
+    # Create mutually exclusive group for skip_tables and only_table  
+    table_group = parser.add_mutually_exclusive_group()  
+    table_group.add_argument("--skip_tables", nargs="+", help="List of table names to skip during export")  
+    table_group.add_argument("--only_table", help="Export only this specific table, skip all others")  
 
     # Parse the arguments  
     args = parser.parse_args()  
@@ -267,5 +300,6 @@ if __name__ == "__main__":
         batch_size=args.batch_size,  
         single_query_mode=args.single_query_mode,  
         use_last_id=args.last_id,  
-        skip_tables=args.skip_tables  # Add skip_tables argument  
-    )  
+        skip_tables=args.skip_tables,  
+        only_table=args.only_table  
+    ) 
