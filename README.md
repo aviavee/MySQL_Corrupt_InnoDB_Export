@@ -5,13 +5,12 @@ A robust Python utility designed to export data from corrupted MySQL databases. 
 
 ## Operation Strategy for Corrupted Databases  
 The recommended approach for handling corrupted databases is to:  
-1. Start with normal batch mode export (default operation)  
-2. If/When the export crashes at a specific point in a table, note the last successful ID
-3. Add the --last_id flag and supply the last id in the table, highly like it will export data now.
-4. Switch to single-query mode (--single_query_mode) to export row by row from the last successful ID  
-5. If single-query mode still fails, determine the last valid ID in the problematic table  
-6. Enable both single-query mode and last_id flag (--single_query_mode --last_id) together  
-7. When prompted, enter the last known good ID for the table and the last id of the complete table.
+1. Start with normal batch mode export (default operation)
+2. If/When mysql crashes, add the --last_id flag and supply the last id in the table (you need to query table manually)
+3. At next crash, switch to single-query mode (--single_query_mode) to export row by row from the last successful ID  
+4. If single-query mode still fails, determine the last valid ID in the problematic table  
+5. Enable both single-query mode and last_id flag (--single_query_mode --last_id) together  
+6. When prompted, enter the last known good ID for the table and the last id of the complete table.
 
 This progressive approach minimizes database load by using batch mode where possible, then falling back to precise single-row queries only when needed. The combination of single-query mode with manual last ID specification helps avoid unnecessary queries to corrupted regions while maximizing data recovery.  
 
