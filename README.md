@@ -44,7 +44,8 @@ python mysql_export.py --db_name DATABASE --output_dir OUTPUT_DIR --username USE
 - `--single_query_mode`: Enable row-by-row export  
 - `--log_level`: Set logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)  
 - `--last_id`: Manually specify last ID for each table  
-- `--skip_tables`: List of tables to skip during export  
+- `--skip_tables`: List of tables to skip during export
+- `--only_table`: Only table to include in export 
 
 ## Core Functions  
 
@@ -95,7 +96,8 @@ python mysql_export.py \
   --password mypass \  
   --batch_size 5000 \  
   --log_level DEBUG \  
-  --skip_tables table1 table2  
+  --skip_tables table1 table2
+  --only_table table3
 ```  
 
 ## License  
