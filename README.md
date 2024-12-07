@@ -16,7 +16,7 @@ This script exports all tables from a MySQL database to CSV files in batches. It
 ## Installation  
 1. Clone this repository:  
    ```bash  
-   git clone https://github.com/your-username/mysql-database-exporter.git  
+   git clone https://github.com/your-username/mysql-database-exporter.git
    cd mysql-database-exporter  
    ```  
 
